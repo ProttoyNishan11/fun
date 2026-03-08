@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Feud - Hosted by Prottoy Nishan</title>
+    <style>
+        /* Base Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Glassmorphism Elements */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            margin: 20px;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        .login-card {
+            max-width: 400px;
+            text-align: center;
+            margin-top: 10vh;
+        }
+
+        h1, h2, h3 {
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            margin-top: 0;
+        }
+
+        /* Buttons & Inputs */
+        .btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 12px 20px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        .btn-reveal {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: rgba(46, 204, 113, 0.6);
+        }
+
+        input {
+            width: calc(100% - 24px);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            outline: none;
+            color: #333;
+        }
+
+        /* Strike Styles */
+        .strike-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            min-height: 80px;
+        }
+
+        .strike-x {
+            font-size: 80px;
+            font-weight: 900;
+            color: #e74c3c;
+            text-shadow: 0 0 15px rgba(231, 76, 60, 0.6), 2px 2px 5px rgba(0,0,0,0.5);
+            display: none; 
+            animation: strikePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes strikePop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .strike-active {
+            display: block;
+        }
+
+        /* Views */
+        #admin-view, #participant-view, #admin-login-form, #participant-ready {
+            display: none;
+        }
+
+        /* Game Board Grid */
+        .board-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .answer-slot {
+            background: linear-gradient(180deg, #0d47a1 0%, #1565c0 100%);
+            border: 2px solid #64b5f6;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            min-height: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            text-transform: uppercase;
+        }
+
+        .points {
+            background: #1e88e5;
+            padding: 5px 15px;
+            border-radius: 4px;
+            border: 1px solid #90caf9;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .admin-answer-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .admin-strike-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <div id="login-view" class="glass-panel login-card">
+        <h1>Family Feud</h1>
+        <p>Select your role</p>
+
+        <div id="role-selection">
+            <button class="btn" onclick="showAdminForm()">Admin / Host</button>
+            <button class="btn" onclick="joinAsParticipant()">Participant</button>
+        </div>
+
+        <div id="admin-login-form">
+            <h3>Host Login</h3>
+            <input type="text" id="username" placeholder="Name">
+            <input type="password" id="password" placeholder="Password">
+            <button class="btn" onclick="verifyLogin()">Login</button>
+            <button class="btn" style="background: transparent; border: none; font-size: 14px; text-decoration: underline;" onclick="hideAdminForm()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="admin-view" class="glass-panel" style="width: 95%;">
+        <h2>Host Dashboard</h2>
+        
+        <div class="admin-controls">
+            <button class="btn btn-small" onclick="loadSet(1)">Load Set 1</button>
+            <button class="btn btn-small" onclick="loadSet(2)">Load Set 2</button>
+            <button class="btn btn-small" onclick="loadSet(3)">Load Set 3</button>
+            <button class="btn btn-small" style="background: rgba(231, 76, 60, 0.4);" onclick="resetGame()">Reset Game</button>
+        </div>
+
+        <div class="glass-panel" style="width: calc(100% - 60px); margin: 0;">
+            <h3 id="admin-question-text">Select a set to begin.</h3>
+            <button class="btn btn-reveal" onclick="revealQuestion()">Reveal Question to Players</button>
+            
+            <div id="admin-answers-list" style="margin-top: 20px;"></div>
+
+            <div class="admin-strike-controls">
+                <span style="font-weight: bold;">STRIKES: </span>
+                <button class="btn btn-small" style="background: #e74c3c;" onclick="setStrikes(1)">X</button>
+                <button class="btn btn-small" style="background: #e74c3c;" onclick="setStrikes(2)">XX</button>
+                <button class="btn btn-small" style="background: #e74c3c;" onclick="setStrikes(3)">XXX</button>
+                <button class="btn btn-small" style="background: #7f8c8d;" onclick="setStrikes(0)">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="participant-view" class="glass-panel">
+        <div id="participant-ready" style="display: block; text-align: center;">
+            <button class="btn" onclick="startParticipant()">Click to Start Game Audio</button>
+        </div>
+
+        <div id="participant-game-area" style="display: none;">
+            <h2 id="participant-question" style="text-align: center; font-size: 28px; min-height: 40px;">
+                Waiting for Host...
+            </h2>
+
+            <div class="strike-container" id="participant-strikes">
+                <div class="strike-x" id="s1">X</div>
+                <div class="strike-x" id="s2">X</div>
+                <div class="strike-x" id="s3">X</div>
+            </div>
+            
+            <div id="participant-board" class="board-grid"></div>
+        </div>
+    </div>
+
+    <audio id="sound-ding" src="https://www.myinstants.com/media/sounds/family-feud-ding.mp3"></audio>
+    <audio id="sound-buzzer" src="https://www.myinstants.com/media/sounds/family-feud-buzzer.mp3"></audio>
+
+    <script>
+        // --- 1. FIREBASE INITIALIZATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRVnkc_cXmPFBAiunZ5uwc6OS70M8uQc0",
+            authDomain: "family-feud-bangladesh-by-pn11.firebaseapp.com",
+            projectId: "family-feud-bangladesh-by-pn11",
+            storageBucket: "family-feud-bangladesh-by-pn11.firebasestorage.app",
+            messagingSenderId: "488399547377",
+            appId: "1:488399547377:web:3433011b2e593c22b6b250",
+            measurementId: "G-1716ZRN4F7",
+            // Make sure this URL matches your Realtime Database exactly
+            databaseURL: "https://family-feud-bangladesh-by-pn11-default-rtdb.firebaseio.com" 
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const stateRef = db.ref('feudState');
+
+        // --- 2. GAME DATA ---
+        const gameData = {
+            1: {
+                question: "Name something people often lose.",
+                answers: [
+                    { text: "Keys", points: 45 },
+                    { text: "Phone", points: 30 },
+                    { text: "Wallet/Purse", points: 15 },
+                    { text: "Glasses", points: 10 }
+                ]
+            },
+            2: {
+                question: "Name a reason someone might be late to school.",
+                answers: [
+                    { text: "Overslept", points: 50 },
+                    { text: "Traffic", points: 25 },
+                    { text: "Missed Bus", points: 15 },
+                    { text: "Feeling Sick", points: 10 }
+                ]
+            },
+            3: {
+                question: "Name a popular fast food chain.",
+                answers: [
+                    { text: "McDonald's", points: 40 },
+                    { text: "KFC", points: 25 },
+                    { text: "Burger King", points: 20 },
+                    { text: "Domino's", points: 15 }
+                ]
+            }
+        };
+
+        // --- 3. CLOUD STATE MANAGEMENT ---
+        let localState = {
+            setId: 1,
+            questionRevealed: false,
+            revealedAnswers: [],
+            strikes: 0,
+            lastAction: 'none'
+        };
+
+        // Listen for changes from the cloud (Instantly syncs to all devices)
+        stateRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                localState = data;
+                // Ensure arrays don't become undefined in Firebase
+                if (!localState.revealedAnswers) localState.revealedAnswers = []; 
+                renderParticipantBoard();
+                renderAdminBoard(); 
+            }
+        });
+
+        // Push state up to the cloud
+        function syncState() {
+            stateRef.set(localState);
+        }
+
+        // --- 4. UI CONTROLS ---
+        function showAdminForm() {
+            document.getElementById('role-selection').style.display = 'none';
+            document.getElementById('admin-login-form').style.display = 'block';
+        }
+
+        function hideAdminForm() {
+            document.getElementById('admin-login-form').style.display = 'none';
+            document.getElementById('role-selection').style.display = 'block';
+        }
+
+        function switchView(viewId) {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('admin-view').style.display = 'none';
+            document.getElementById('participant-view').style.display = 'none';
+            document.getElementById(viewId).style.display = 'block';
+        }
+
+        function verifyLogin() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+
+            if (user === "Prottoy Nishan" && pass === "host") { 
+                switchView('admin-view');
+                if(!localState.setId) loadSet(1); // Auto load if empty
+            } else {
+                alert("Access Denied.");
+            }
+        }
+
+        function joinAsParticipant() {
+            switchView('participant-view');
+            document.getElementById('participant-ready').style.display = 'block';
+            document.getElementById('participant-game-area').style.display = 'none';
+        }
+
+        function startParticipant() {
+            document.getElementById('participant-ready').style.display = 'none';
+            document.getElementById('participant-game-area').style.display = 'block';
+            renderParticipantBoard();
+        }
+
+        function playSound(type) {
+            const ding = document.getElementById('sound-ding');
+            const buzzer = document.getElementById('sound-buzzer');
+            
+            if (type === 'ding') {
+                ding.currentTime = 0;
+                ding.play().catch(e => console.log("Audio blocked by browser"));
+            } else if (type === 'buzzer') {
+                buzzer.currentTime = 0;
+                buzzer.play().catch(e => console.log("Audio blocked by browser"));
+            }
+        }
+
+        // --- 5. ADMIN ACTIONS (Updates local state, then pushes to Firebase) ---
+        function loadSet(setNumber) {
+            localState = {
+                setId: setNumber,
+                questionRevealed: false,
+                revealedAnswers: [],
+                strikes: 0,
+                lastAction: 'none'
+            };
+            syncState();
+        }
+
+        function revealQuestion() {
+            localState.questionRevealed = true;
+            localState.lastAction = 'none';
+            syncState();
+        }
+
+        function revealAnswer(index) {
+            if (!localState.revealedAnswers.includes(index)) {
+                localState.revealedAnswers.push(index);
+                localState.lastAction = 'ding';
+                syncState();
+            }
+        }
+
+        function setStrikes(count) {
+            if (count > localState.strikes) {
+                localState.lastAction = 'buzzer';
+            } else {
+                localState.lastAction = 'none';
+            }
+            localState.strikes = count;
+            syncState();
+        }
+
+        function resetGame() {
+            loadSet(1);
+        }
+
+        // --- 6. RENDER ENGINE ---
+        function renderAdminBoard() {
+            if (document.getElementById('admin-view').style.display !== 'block') return;
+            
+            const data = gameData[localState.setId];
+            if(!data) return;
+
+            document.getElementById('admin-question-text').innerText = `Set ${localState.setId}: ${data.question}`;
+            const answersList = document.getElementById('admin-answers-list');
+            answersList.innerHTML = '';
+
+            data.answers.forEach((ans, index) => {
+                const isRevealed = localState.revealedAnswers.includes(index);
+                answersList.innerHTML += `
+                    <div class="admin-answer-row">
+                        <span style="width: 30px; font-weight: bold;">${index + 1}.</span>
+                        <span style="flex-grow: 1;">${ans.text} (${ans.points} pts)</span>
+                        <button class="btn btn-small btn-reveal" ${isRevealed ? 'disabled style="opacity: 0.5;"' : ''} onclick="revealAnswer(${index})">
+                            ${isRevealed ? 'Revealed' : 'Reveal'}
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderParticipantBoard() {
+            const data = gameData[localState.setId];
+            if(!data) return;
+
+            // Trigger Sound
+            if (document.getElementById('participant-game-area').style.display === 'block') {
+                if (localState.lastAction === 'ding') playSound('ding');
+                if (localState.lastAction === 'buzzer') playSound('buzzer');
+            }
+
+            // Render Question
+            document.getElementById('participant-question').innerText = localState.questionRevealed ? data.question : "Waiting for Host...";
+
+            // Render Strikes
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`s${i}`).className = i <= localState.strikes ? 'strike-x strike-active' : 'strike-x';
+            }
+
+            // Render Board
+            const board = document.getElementById('participant-board');
+            board.innerHTML = '';
+            data.answers.forEach((ans, index) => {
+                const isRevealed = localState.revealedAnswers.includes(index);
+                board.innerHTML += `
+                    <div class="answer-slot" ${!isRevealed ? 'style="justify-content: center; color: #90caf9;"' : ''}>
+                        <span>${isRevealed ? ans.text : index + 1}</span>
+                        ${isRevealed ? `<span class="points">${ans.points}</span>` : ''}
+                    </div>
+                `;
+            });
+            
+            // Clear last action after rendering so it doesn't loop
+            if (localState.lastAction !== 'none') {
+                localState.lastAction = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
